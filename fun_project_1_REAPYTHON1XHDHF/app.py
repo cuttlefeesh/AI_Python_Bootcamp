@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Tes Kepribadian", page_icon="🧠")
 st.title("🔍 Tes Kepribadian: Introvert, Ekstrovert, atau Ambivert?")
-st.write("Jawab 9 pertanyaan berikut untuk mengetahui kecenderungan kepribadianmu!")
+st.write("Jawab 6 pertanyaan berikut untuk mengetahui kecenderungan kepribadianmu!")
 
 # Input nama pengguna
 user_name = st.text_input("Masukkan nama kamu terlebih dahulu untuk memulai:")
