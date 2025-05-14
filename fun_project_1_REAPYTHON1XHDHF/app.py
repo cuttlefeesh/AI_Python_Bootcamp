@@ -1,4 +1,5 @@
 import streamlit as st
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Tes Kepribadian", page_icon="🧠")
 st.title("🔍 Tes Kepribadian: Introvert, Ekstrovert, atau Ambivert?")
@@ -111,5 +112,22 @@ if user_name:
             elif tipe_terpilih == "Ambivert":
                 st.image("https://media.giphy.com/media/uVd5gVHAq63SjtjAOe/giphy.gif", width=300)
                 st.success(f"{user_name}, kamu adalah seorang **Ambivert**. Kamu fleksibel dan bisa menyesuaikan diri dengan situasi.")
+
+            # Menampilkan proporsi kepribadian
+            if len(kandidat_teratas) == 1:
+                st.subheader("📊 Proporsi Kepribadian:")
+                labels = ['Introvert', 'Ekstrovert', 'Ambivert']
+                sizes = [scores['Introvert'], scores['Ekstrovert'], scores['Ambivert']]
+
+                # Memfilter label kepribadian yang memiliki skor 0
+                # Jika ada kepribadian yang distribusinya 0.0%, jangan tampilkan text jenis kepribadian dan distribusinya
+                filtered_labels = [label for label, size in zip(labels, sizes) if size > 0]
+                filtered_sizes = [size for size in sizes if size > 0]
+
+                if filtered_sizes:  # Only plot if there are non-zero values
+                    fig, ax = plt.subplots(figsize=(3, 3))
+                    ax.pie(filtered_sizes, labels=filtered_labels, autopct='%1.1f%%', startangle=90, colors=['#FF9999','#66B2FF','#99FF99'])
+                    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+                    st.pyplot(fig)
 else:
     st.info("Silakan masukkan nama terlebih dahulu untuk memulai kuis.")
