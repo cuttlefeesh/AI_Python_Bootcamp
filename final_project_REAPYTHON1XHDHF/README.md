@@ -171,7 +171,6 @@ Loading model...
 - Proses selanjutnya akan lebih cepat
 - Gunakan koneksi internet yang stabil
 
----
-
 **Selamat menggunakan Mc Ronald Drive-Thru! 🍔🚗**
+---
 **Regards : Chandra and Mita**
