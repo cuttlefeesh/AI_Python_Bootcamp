@@ -10,7 +10,6 @@ Mc Ronald Drive-Thru adalah aplikasi berbasis Streamlit yang memungkinkan pelang
 
 - **Pemesanan dengan Suara**: Pelanggan dapat memesan dengan berbicara
 - **Pengenalan Suara AI**: Menggunakan model Whisper untuk akurasi tinggi
-- **Manajemen Pesanan**: Tambah, kurangi, atau hapus item pesanan
 - **Sistem Pembayaran**: Mendukung Cash, E-Wallet, dan Debit Card
 - **Cetak Struk**: Menghasilkan struk pembelian otomatis
 - **Antarmuka Mudah**: UI yang user-friendly dengan emoji dan warna
@@ -35,7 +34,6 @@ streamlit
 pandas
 torch
 librosa
-soundfile
 speech_recognition
 transformers
 ```
@@ -51,32 +49,17 @@ transformers
 
 2. **Install dependencies:**
 ```bash
-pip install streamlit pandas torch librosa soundfile speechrecognition transformers
+pip install -r requirements.txt
 ```
 
-3. **Install PyAudio untuk mikrofon (Windows):**
-```bash
-pip install pyaudio
-```
-
-**Untuk Linux/Mac:**
-```bash
-# Ubuntu/Debian
-sudo apt-get install portaudio19-dev python3-pyaudio
-pip install pyaudio
-
-# MacOS
-brew install portaudio
-pip install pyaudio
-```
 
 ## 🚀 Cara Menjalankan
 
-1. **Buka terminal/command prompt**
+1. **Buka VS Code**
 
 2. **Navigasi ke folder aplikasi:**
 ```bash
-cd path/to/your/app
+cd "path/to/your/app"
 ```
 
 3. **Jalankan aplikasi:**
@@ -84,7 +67,6 @@ cd path/to/your/app
 streamlit run voice.py
 ```
 
-4. **Buka browser** dan akses `http://localhost:8501`
 
 ## 📱 Cara Penggunaan
 
@@ -98,13 +80,7 @@ streamlit run voice.py
 - Sistem akan menampilkan hasil pengenalan suara
 - Pesanan akan otomatis ditambahkan ke keranjang
 
-### 2. Mengelola Pesanan
-- **Tambah jumlah**: Klik tombol ➕
-- **Kurangi jumlah**: Klik tombol ➖
-- **Edit langsung**: Ubah angka di kolom Qty
-- **Hapus item**: Klik tombol 🗑️
-
-### 3. Tahap Pembayaran
+### 2. Tahap Pembayaran
 - Klik **🛒 Lanjut ke Pembayaran**
 - Pilih metode pembayaran:
   - **Cash**: Masukkan jumlah uang yang diterima
@@ -112,7 +88,7 @@ streamlit run voice.py
   - **Debit Card**: Konfirmasi pembayaran kartu
 - Sistem akan hitung kembalian (untuk Cash)
 
-### 4. Cetak Struk
+### 3. Cetak Struk
 - Klik **🖨️ Cetak Struk**
 - Struk akan ditampilkan dengan detail:
   - Daftar pesanan dan harga
@@ -150,9 +126,6 @@ streamlit run voice.py
 | Tombol | Fungsi |
 |--------|--------|
 | 🎤 Mulai Bicara | Mengaktifkan pengenalan suara |
-| ➖ | Mengurangi jumlah item |
-| ➕ | Menambah jumlah item |
-| 🗑️ | Menghapus item dari pesanan |
 | 🛒 Lanjut ke Pembayaran | Pindah ke tahap pembayaran |
 | 🗑️ Reset Pesanan | Menghapus semua pesanan |
 | ⬅️ Kembali ke Pemesanan | Kembali ke tahap pemesanan |
@@ -196,25 +169,6 @@ Loading model...
 - Proses selanjutnya akan lebih cepat
 - Gunakan koneksi internet yang stabil
 
-## 📝 Catatan Pengembangan
-
-- Model Whisper akan di-cache setelah download pertama
-- File audio sementara (`temp_audio.wav`) akan otomatis dihapus
-- Session state digunakan untuk menyimpan data pesanan
-- Aplikasi tidak menyimpan riwayat transaksi ke database
-
-## 🆘 Dukungan
-
-Jika mengalami masalah:
-1. Pastikan semua dependencies terinstal
-2. Periksa koneksi internet
-3. Restart aplikasi Streamlit
-4. Periksa izin mikrofon di browser
-
-## 📄 Lisensi
-
-Aplikasi ini dibuat untuk tujuan pembelajaran dan demonstrasi. Silakan gunakan dan modifikasi sesuai kebutuhan.
-
----
-
 **Selamat menggunakan Mc Ronald Drive-Thru! 🍔🚗**
+---
+**Regards : Chandra and Mita**
