@@ -57,7 +57,7 @@ pip install -r requirements.txt
 
 ## 🚀 Cara Menjalankan
 
-1. **Buka terminal/command prompt**
+1. **Buka VS Code**
 
 2. **Navigasi ke folder aplikasi:**
 ```bash
