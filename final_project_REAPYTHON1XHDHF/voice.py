@@ -116,7 +116,7 @@ def process_order_text(text):
         "ayam goreng": ["ayam goreng", "ayam", "fried chicken"],
         "kentang goreng": ["kentang goreng", "kentang", "french fries", "fries"],
         "hot dog": ["hot dog", "hotdog", "sosis"],
-        "cola": ["cola", "coke", "pepsi", "soda"],
+        "cola": ["cola", "kola", "pepsi", "soda"],
         "mineral water": ["mineral water", "air mineral", "air", "water"],
         "es krim": ["es krim", "ice cream", "eskrim"]
     }
