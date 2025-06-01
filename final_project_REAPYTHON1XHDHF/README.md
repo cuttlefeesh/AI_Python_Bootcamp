@@ -10,7 +10,6 @@ Mc Ronald Drive-Thru adalah aplikasi berbasis Streamlit yang memungkinkan pelang
 
 - **Pemesanan dengan Suara**: Pelanggan dapat memesan dengan berbicara
 - **Pengenalan Suara AI**: Menggunakan model Whisper untuk akurasi tinggi
-- **Manajemen Pesanan**: Tambah, kurangi, atau hapus item pesanan
 - **Sistem Pembayaran**: Mendukung Cash, E-Wallet, dan Debit Card
 - **Cetak Struk**: Menghasilkan struk pembelian otomatis
 - **Antarmuka Mudah**: UI yang user-friendly dengan emoji dan warna
