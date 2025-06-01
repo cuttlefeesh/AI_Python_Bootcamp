@@ -34,7 +34,6 @@ streamlit
 pandas
 torch
 librosa
-soundfile
 speech_recognition
 transformers
 ```
