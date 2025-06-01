@@ -61,7 +61,7 @@ pip install -r requirements.txt
 
 2. **Navigasi ke folder aplikasi:**
 ```bash
-cd path/to/your/app
+cd "path/to/your/app"
 ```
 
 3. **Jalankan aplikasi:**
