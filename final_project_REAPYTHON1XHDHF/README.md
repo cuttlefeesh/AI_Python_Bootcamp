@@ -171,8 +171,7 @@ Loading model...
 - Proses selanjutnya akan lebih cepat
 - Gunakan koneksi internet yang stabil
 
-Aplikasi ini dibuat untuk tujuan pembelajaran dan demonstrasi. Silakan gunakan dan modifikasi sesuai kebutuhan.
-
 ---
 
 **Selamat menggunakan Mc Ronald Drive-Thru! 🍔🚗**
+**Regards : Chandra and Mita**
