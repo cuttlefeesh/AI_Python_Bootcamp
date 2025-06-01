@@ -112,7 +112,7 @@ streamlit run voice.py
 - **Ayam Goreng**: "ayam goreng", "ayam", "fried chicken"
 - **Kentang Goreng**: "kentang goreng", "kentang", "french fries", "fries"
 - **Hot Dog**: "hot dog", "hotdog", "sosis"
-- **Cola**: "cola", "coke", "pepsi", "soda"
+- **Cola**: "cola", "kola", "pepsi", "soda"
 - **Air Mineral**: "mineral water", "air mineral", "air", "water"
 - **Es Krim**: "es krim", "ice cream", "eskrim"
 
