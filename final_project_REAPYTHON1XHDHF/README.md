@@ -88,7 +88,14 @@ streamlit run voice.py
   - **Debit Card**: Konfirmasi pembayaran kartu
 - Sistem akan hitung kembalian (untuk Cash)
 
-### 3. Cetak Struk
+### 3. Mengelola Pesanan
+
+- Tambah jumlah: Klik tombol ➕
+- Kurangi jumlah: Klik tombol ➖
+- Edit manual: Ubah angka di kolom jumlah
+- Hapus item: Klik tombol 🗑️
+
+### 4. Cetak Struk
 - Klik **🖨️ Cetak Struk**
 - Struk akan ditampilkan dengan detail:
   - Daftar pesanan dan harga
@@ -116,7 +123,7 @@ streamlit run voice.py
 - **Air Mineral**: "mineral water", "air mineral", "air", "water"
 - **Es Krim**: "es krim", "ice cream", "eskrim"
 
-### Angka yang Dikenali:
+### Angka yang Dikenali (Maks sampai 20) :
 - **Bahasa Indonesia**: satu, dua, tiga, empat, lima, dst.
 - **Bahasa Inggris**: one, two, three, four, five, dst.
 - **Angka**: 1, 2, 3, 4, 5, dst.
@@ -129,6 +136,9 @@ streamlit run voice.py
 | 🛒 Lanjut ke Pembayaran | Pindah ke tahap pembayaran |
 | 🗑️ Reset Pesanan | Menghapus semua pesanan |
 | ⬅️ Kembali ke Pemesanan | Kembali ke tahap pemesanan |
+| ➕ Tambah Jumlah | Menambah kuantitas item pesanan |
+| ➖ Kurangi Jumlah | Mengurangi kuantitas item pesanan |
+| 🗑️ Hapus Pesanan | Menghapus salah satu item pesanan |
 | 🖨️ Cetak Struk | Menghasilkan struk pembelian |
 | 🔄 Pesanan Baru | Memulai transaksi baru |
 
