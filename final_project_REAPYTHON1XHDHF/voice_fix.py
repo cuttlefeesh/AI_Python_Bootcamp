@@ -7,44 +7,75 @@ import speech_recognition as sr
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import os
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 # === Memuat model dan processor Whisper dari Hugging Face ===
 @st.cache_resource
 def load_whisper_model():
-    processor = AutoProcessor.from_pretrained("openai/whisper-small")
-    model = AutoModelForSpeechSeq2Seq.from_pretrained("openai/whisper-small")
-    return processor, model
+    try:
+        processor = AutoProcessor.from_pretrained(
+            "openai/whisper-small",
+            cache_dir="./model_cache"
+        )
+        model = AutoModelForSpeechSeq2Seq.from_pretrained(
+            "openai/whisper-small",
+            cache_dir="./model_cache",
+            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            low_cpu_mem_usage=True,
+            use_safetensors=True
+        )
+        return processor, model
+    
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None, None
 
+# Load model and processor globally
 processor, model = load_whisper_model()
 
 # === Fungsi Pengenalan Suara Menggunakan API Whisper ===
 def recognize_speech_from_whisper(audio_file_path):
     try:
-        # Membaca file audio dan mengonversi sampling rate ke 16kHz
-        audio_input, sample_rate = librosa.load(audio_file_path, sr=16000)
+        # Cek apakah model berhasil dimuat
+        if processor is None or model is None:
+            return "Error: Model tidak dapat dimuat"
         
-        # Menggunakan processor untuk memproses audio input
+        # Load audio dengan error handling
+        try:
+            audio_input, sample_rate = librosa.load(audio_file_path, sr=16000)
+        except Exception as e:
+            st.error(f"Error loading audio: {str(e)}")
+            return "Error: Tidak dapat memproses file audio"
+        
+        # Proses audio
         inputs = processor(audio_input, sampling_rate=16000, return_tensors="pt")
         
-        # Melakukan inferensi dengan model Whisper
+        # Generate dengan parameter yang lebih stabil
         with torch.no_grad():
-            # Use the correct key - typically 'input_features' for Whisper
             if "input_features" in inputs:
-                generated_ids = model.generate(inputs["input_features"])
-            elif "input_values" in inputs:
-                generated_ids = model.generate(inputs["input_values"])
+                generated_ids = model.generate(
+                    inputs["input_features"],
+                    max_length=448,
+                    num_beams=1,
+                    do_sample=False
+                )
             else:
-                # Fallback: use the first available tensor
                 first_key = list(inputs.keys())[0]
-                generated_ids = model.generate(inputs[first_key])
+                generated_ids = model.generate(
+                    inputs[first_key],
+                    max_length=448,
+                    num_beams=1,
+                    do_sample=False
+                )
         
-        # Mendekodekan hasil inferensi menjadi teks
+        # Decode hasil
         transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        
         return transcription
         
     except Exception as e:
         st.error(f"Error in speech recognition: {str(e)}")
         return "Maaf, tidak dapat mengenali suara. Silakan coba lagi."
+
 
 # === Fungsi untuk memproses teks pesanan dan menambahkannya ke pesanan ===
 def process_order_text(text):

@@ -1,7 +1,10 @@
-streamlit
-pandas
-torch
-librosa
-SpeechRecognition
-transformers
-PyAudio
+streamlit==1.28.0
+pandas==2.0.3
+torch==2.0.1
+torchaudio==2.0.2
+librosa==0.10.1
+SpeechRecognition==3.10.0
+transformers==4.33.0
+accelerate==0.21.0
+datasets==2.14.0
+soundfile==0.12.1
