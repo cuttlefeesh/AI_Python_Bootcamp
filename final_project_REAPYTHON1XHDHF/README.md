@@ -4,7 +4,7 @@ Aplikasi pemesanan makanan drive-thru dengan teknologi pengenalan suara mengguna
 
 ## 📋 Deskripsi
 
-Mc Ronald Drive-Thru adalah aplikasi berbasis Streamlit yang memungkinkan pelanggan memesan makanan menggunakan perintah suara. Aplikasi ini akan merekam suara pengguna yang berisi menu yang akan dipesan menggunakan `streamlit-audiorec`. Kemudian, audio tersebut disimpan dalam format .wav dan diolah menggunakan teknologi `AI Whisper dari OpenAI` untuk mengenali dan memproses ucapan pelanggan menjadi pesanan makanan.
+Mc Ronald Drive-Thru adalah aplikasi berbasis Streamlit yang memungkinkan pelanggan memesan makanan menggunakan perintah suara. Aplikasi ini akan merekam suara pengguna menggunakan `streamlit-audiorec`. Kemudian, audio tersebut disimpan dalam format .wav dan diolah menggunakan teknologi `AI Whisper dari OpenAI` untuk mengenali dan memproses ucapan pelanggan menjadi pesanan makanan.
 
 ## ✨ Fitur Utama
 
