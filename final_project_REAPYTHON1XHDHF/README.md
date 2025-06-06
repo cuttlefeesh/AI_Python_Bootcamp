@@ -4,7 +4,7 @@ Aplikasi pemesanan makanan drive-thru dengan teknologi pengenalan suara mengguna
 
 ## 📋 Deskripsi
 
-Mc Ronald Drive-Thru adalah aplikasi berbasis Streamlit yang memungkinkan pelanggan memesan makanan menggunakan perintah suara. Aplikasi ini menggunakan teknologi AI Whisper dari OpenAI untuk mengenali dan memproses ucapan pelanggan menjadi pesanan makanan.
+Mc Ronald Drive-Thru adalah aplikasi berbasis Streamlit yang memungkinkan pelanggan memesan makanan menggunakan perintah suara. Aplikasi ini akan merekam suara pengguna yang berisi menu yang akan dipesan menggunakan streamlit-audiorec. Kemudian, audio tersebut disimpan dalam format .wav dan diolah menggunakan teknologi AI Whisper dari OpenAI untuk mengenali dan memproses ucapan pelanggan menjadi pesanan makanan.
 
 ## ✨ Fitur Utama
 
@@ -78,11 +78,12 @@ streamlit run app.py
 
 ### 1. Tahap Pemesanan
 - Lihat menu yang tersedia di bagian atas
-- Klik tombol **🎤 Mulai Bicara**
+- Klik tombol **Start Recording**
 - Ucapkan pesanan Anda, contoh:
   - "Saya mau dua burger dan satu cola"
   - "Pesan tiga ayam goreng"
   - "Mau kentang goreng lima"
+- Klik tombol **Stop** untuk menyudahi pesanan
 - Sistem akan menampilkan hasil pengenalan suara
 - Pesanan akan otomatis ditambahkan ke keranjang
 
@@ -138,9 +139,12 @@ streamlit run app.py
 
 | Tombol | Fungsi |
 |--------|--------|
-| 🎤 Mulai Bicara | Mengaktifkan pengenalan suara |
+| Start Recording | Merekam pesanan |
+| Stop | Menghentikan rekaman dan disimpan dalam format .wav |
+| Reset | Menghapus file audio .wav untuk mengulangi pesanan |
+| Download | Mengunduh file audio.wav |
 | 🛒 Lanjut ke Pembayaran | Pindah ke tahap pembayaran |
-| 🗑️ Reset Pesanan | Menghapus semua pesanan |
+| 🗑️ Reset Pesanan | Menghapus semua pesanan yang telah tercatat |
 | ⬅️ Kembali ke Pemesanan | Kembali ke tahap pemesanan |
 | ➕ Tambah Jumlah | Menambah kuantitas item pesanan |
 | ➖ Kurangi Jumlah | Mengurangi kuantitas item pesanan |
