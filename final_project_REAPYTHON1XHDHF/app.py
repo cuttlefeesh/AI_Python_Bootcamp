@@ -387,7 +387,7 @@ if st.session_state.stage == "ordering":
     
     # === st_audiorec for voice input ===
     st.markdown("Tekan tombol 'Record' di bawah untuk mulai berbicara:")
-    wav_audio_data = st_audiorec(key="voice_recorder") # Use st_audiorec component
+    wav_audio_data = st_audiorec() # Use st_audiorec component
 
     if wav_audio_data is not None:
         # st.audio(wav_audio_data, format='audio/wav') # Optional: uncomment to play back recorded audio
