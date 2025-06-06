@@ -447,7 +447,7 @@ if st.session_state.stage == "ordering":
                 if os.path.exists(temp_audio_file):
                     os.remove(temp_audio_file)
 
-                st.success(f"Pesanan yang dikenali: {transcription}")
+                #st.success(f"Pesanan yang dikenali: {transcription}")
 
                 # Proses transkripsi untuk menambah item ke pesanan
                 items_recognized = process_order_text(transcription)
@@ -571,5 +571,5 @@ elif st.session_state.stage == "completed":
         st.rerun()
 
 # Tampilkan transkripsi terakhir jika ada di tahap ordering
-if st.session_state.last_transcription and st.session_state.stage == "ordering":
-    st.info(f"Transkripsi terakhir: {st.session_state.last_transcription}")
+#if st.session_state.last_transcription and st.session_state.stage == "ordering":
+    #st.info(f"Transkripsi terakhir: {st.session_state.last_transcription}")
