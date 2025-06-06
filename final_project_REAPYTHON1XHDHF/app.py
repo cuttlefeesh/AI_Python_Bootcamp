@@ -401,13 +401,6 @@ if st.session_state.stage == "ordering":
             transcription = recognize_speech_from_whisper(temp_audio_file)
             st.session_state.last_transcription = transcription
 
-            # Clean up temp file
-            if os.path.exists(temp_audio_file):
-                os.remove(temp_audio_file)
-
-            # Menampilkan hasil transkripsi
-            st.success(f"Pesanan yang dikenali: {transcription}")
-
             # Proses transkripsi untuk menambah item ke pesanan
             items_recognized = process_order_text(transcription)
             if items_recognized:
@@ -416,8 +409,12 @@ if st.session_state.stage == "ordering":
                     for menu_item in menu_items:
                         if item_key.replace(" ", "").lower() in menu_item.name.replace(" ", "").lower():
                             st.session_state.order.add_item(menu_item, qty)
-                            st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
+                            st.success(f"✅ Menambahkan {qty} x {menu_item.name}"
                             break
+                                       
+            if "temp_wav_audio_data" in st.session_state:
+                del st.session_state.temp_wav_audio_data
+                
             else:
                 st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
         st.rerun() # Rerun to update the order display
