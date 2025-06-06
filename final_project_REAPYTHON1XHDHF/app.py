@@ -3,23 +3,20 @@ import pandas as pd
 import datetime
 import torch
 import librosa
-# speech_recognition tidak diperlukan lagi untuk input mikrofon di Streamlit Cloud
-# import speech_recognition as sr
+import speech_recognition as sr # Although not directly used for recording, it's part of the original logic
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import os
-from audio_recorder_streamlit import audio_recorder
+from st_audiorec import st_audiorec # Import st_audiorec
 
-# Menonaktifkan tokenizers parallelism untuk mencegah warning pada beberapa deployment environment
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # === Memuat model dan processor Whisper dari Hugging Face ===
 @st.cache_resource
 def load_whisper_model():
-    """Memuat model dan processor Whisper dari Hugging Face."""
     try:
         processor = AutoProcessor.from_pretrained(
             "openai/whisper-small",
-            cache_dir="./model_cache" # Cache model secara lokal
+            cache_dir="./model_cache"
         )
         model = AutoModelForSpeechSeq2Seq.from_pretrained(
             "openai/whisper-small",
@@ -29,39 +26,37 @@ def load_whisper_model():
             use_safetensors=True
         )
         return processor, model
+    
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None, None
 
-# Load model dan processor secara global saat aplikasi dimulai
+# Load model and processor globally
 processor, model = load_whisper_model()
 
-# === Fungsi Pengenalan Suara Menggunakan Model Whisper yang Dimuat ===
+# === Fungsi Pengenalan Suara Menggunakan API Whisper ===
 def recognize_speech_from_whisper(audio_file_path):
-    """
-    Mengenali suara dari file audio menggunakan model Whisper yang sudah dimuat.
-    Mengembalikan transkripsi teks.
-    """
     try:
+        # Cek apakah model berhasil dimuat
         if processor is None or model is None:
             return "Error: Model tidak dapat dimuat"
-
-        # Load audio dan pastikan sample rate 16000 Hz
+        
+        # Load audio dengan error handling
         try:
             audio_input, sample_rate = librosa.load(audio_file_path, sr=16000)
         except Exception as e:
             st.error(f"Error loading audio: {str(e)}")
             return "Error: Tidak dapat memproses file audio"
-
-        # Proses audio menggunakan processor Whisper
+        
+        # Proses audio
         inputs = processor(audio_input, sampling_rate=16000, return_tensors="pt")
-
-        # Pastikan input_features ada atau gunakan kunci pertama yang valid
+        
+        # Generate dengan parameter yang lebih stabil
         with torch.no_grad():
             if "input_features" in inputs:
                 generated_ids = model.generate(
                     inputs["input_features"],
-                    max_length=448, # Batasi panjang output untuk efisiensi
+                    max_length=448,
                     num_beams=1,
                     do_sample=False
                 )
@@ -73,90 +68,82 @@ def recognize_speech_from_whisper(audio_file_path):
                     num_beams=1,
                     do_sample=False
                 )
-
-        # Decode hasil transkripsi
+        
+        # Decode hasil
         transcription = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         return transcription
-
+        
     except Exception as e:
         st.error(f"Error in speech recognition: {str(e)}")
         return "Maaf, tidak dapat mengenali suara. Silakan coba lagi."
 
+
 # === Fungsi untuk memproses teks pesanan dan menambahkannya ke pesanan ===
 def process_order_text(text):
-    """
-    Mengekstrak item dan jumlah dari teks pesanan.
-    Mengembalikan dictionary dengan nama item sebagai kunci dan jumlah sebagai nilai.
-    """
     import re
-
-    # Dictionary untuk konversi angka dalam bahasa Indonesia/Inggris ke digit
+    
+    # Dictionary untuk konversi angka dalam bahasa Indonesia ke digit
     number_words = {
         'satu': 1, 'dua': 2, 'tiga': 3, 'empat': 4, 'lima': 5,
         'enam': 6, 'tujuh': 7, 'delapan': 8, 'sembilan': 9, 'sepuluh': 10,
         'sebelas': 11, 'dua belas': 12, 'tiga belas': 13, 'empat belas': 14, 'lima belas': 15,
         'enam belas': 16, 'tujuh belas': 17, 'delapan belas': 18, 'sembilan belas': 19, 'dua puluh': 20,
+        # Tambahkan kata-kata angka dalam bahasa Inggris
         'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
         'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
         'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
         'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20
     }
-
-    def extract_quantity_and_item(text_segment, item_keywords):
-        """Ekstrak jumlah dan item dari segmen teks."""
-        text_segment = text_segment.lower()
-        quantity = 0 # Default ke 0, akan diset ke 1 jika keyword ditemukan tanpa angka spesifik
-
-        # Coba cocokkan keyword dan ekstrak angka di sekitarnya
+    
+    def extract_quantity_and_item(text, item_keywords):
+        """Ekstrak jumlah dan item dari teks"""
+        text = text.lower()
+        quantity = 1  # default
+        
+        # Cari pola angka + item atau item + angka
         for keyword in item_keywords:
-            # Pola: angka (digit atau kata) + item (contoh: "3 burger", "tiga burger")
-            pattern1 = r'(\d+|' + '|'.join(number_words.keys()) + r')\s+(' + re.escape(keyword) + r')'
-            match1 = re.search(pattern1, text_segment)
-
-            # Pola: item + angka (contoh: "burger 3", "burger tiga")
-            pattern2 = r'(' + re.escape(keyword) + r')\s+(\d+|' + '|'.join(number_words.keys()) + r')'
-            match2 = re.search(pattern2, text_segment)
-
-            # Pola: "mau 3 burger", "pesan satu cola"
-            pattern3 = r'(?:mau|pesan|ingin|order)\s+(\d+|' + '|'.join(number_words.keys()) + r')?\s*(' + re.escape(keyword) + r')'
-            match3 = re.search(pattern3, text_segment)
-            
-            # Pola: hanya item tanpa angka eksplisit (default quantity 1)
-            pattern_only_item = r'\b' + re.escape(keyword) + r'\b'
-            match_only_item = re.search(pattern_only_item, text_segment)
-
-            if match1:
-                qty_str = match1.group(1)
-                if qty_str.isdigit():
-                    quantity = int(qty_str)
+            if keyword in text:
+                # Cari angka di sekitar keyword
+                # Pola: angka + item (contoh: "3 burger", "tiga burger")
+                pattern1 = r'(\d+|\w+)\s+' + re.escape(keyword)
+                match1 = re.search(pattern1, text)
+                
+                # Pola: item + angka (contoh: "burger 3", "burger tiga")
+                pattern2 = re.escape(keyword) + r'\s+(\d+|\w+)'
+                match2 = re.search(pattern2, text)
+                
+                # Pola: "saya mau 3 burger" atau "pesan 3 burger"
+                pattern3 = r'(?:mau|pesan|ingin|order)\s+(\d+|\w+)\s+' + re.escape(keyword)
+                match3 = re.search(pattern3, text)
+                
+                if match1:
+                    qty_str = match1.group(1)
+                elif match2:
+                    qty_str = match2.group(1)
+                elif match3:
+                    qty_str = match3.group(1)
                 else:
-                    quantity = number_words.get(qty_str, 1) # Fallback ke 1 jika kata angka tidak dikenal
-                return max(1, quantity) # Minimal 1
-            elif match2:
-                qty_str = match2.group(2)
-                if qty_str.isdigit():
-                    quantity = int(qty_str)
-                else:
-                    quantity = number_words.get(qty_str, 1)
-                return max(1, quantity)
-            elif match3:
-                qty_str = match3.group(1)
-                if qty_str: # Jika angka ditemukan di pola ini
+                    # Jika tidak ada pola yang cocok, cari angka terdekat
+                    numbers_in_text = re.findall(r'\d+', text)
+                    if numbers_in_text:
+                        qty_str = numbers_in_text[0]  # Ambil angka pertama
+                    else:
+                        qty_str = None
+                
+                if qty_str:
+                    # Konversi ke angka
                     if qty_str.isdigit():
                         quantity = int(qty_str)
+                    elif qty_str in number_words:
+                        quantity = number_words[qty_str]
                     else:
-                        quantity = number_words.get(qty_str, 1)
-                else: # Jika tidak ada angka eksplisit, berarti default 1
-                    quantity = 1
-                return max(1, quantity)
-            elif match_only_item:
-                # Jika hanya itemnya yang disebut tanpa angka, default 1
-                quantity = 1
-                return max(1, quantity)
-        return 0 # Item tidak ditemukan atau tidak ada kuantitas yang terdeteksi
-
+                        quantity = 1
+                
+                return max(1, quantity)  # Minimal 1
+        
+        return 0  # Item tidak ditemukan
+    
     # Dictionary item dengan keywords yang mungkin diucapkan
-    # Keywords harus dalam urutan spesifik ke umum atau diuji dengan hati-hati
     items_config = {
         "burger": ["burger", "hamburger"],
         "ayam goreng": ["ayam goreng", "ayam", "fried chicken"],
@@ -166,100 +153,76 @@ def process_order_text(text):
         "mineral water": ["mineral water", "air mineral", "air", "water"],
         "es krim": ["es krim", "ice cream", "eskrim"]
     }
-
-    found_items = {}
-    remaining_text = text.lower()
-
-    # Iterasi melalui setiap item yang mungkin dan ekstrak kuantitasnya
+    
+    # Proses setiap item
+    items = {}
     for item_name, keywords in items_config.items():
-        # Buat regex pattern untuk mencari item dan kuantitasnya secara berulang
-        # Ini adalah tantangan karena satu baris teks bisa punya banyak item
-        # Untuk simplicity, kita akan memproses seluruh teks untuk setiap item
-        # dan memastikan kita tidak menghitung satu bagian teks berkali-kali.
-
-        # Pendekatan yang lebih sederhana:
-        # Coba ekstrak kuantitas untuk setiap item.
-        # Jika satu item disebutkan beberapa kali (misal: "dua burger satu burger lagi"),
-        # ini mungkin hanya menangkap yang pertama atau paling dominan.
-        # Untuk penanganan yang lebih canggih, butuh stateful parsing atau NLU yang lebih kuat.
-        quantity = extract_quantity_and_item(remaining_text, keywords)
+        quantity = extract_quantity_and_item(text, keywords)
         if quantity > 0:
-            found_items[item_name] = found_items.get(item_name, 0) + quantity # Tambahkan jika sudah ada
-
-            # (Opsional) Hapus bagian yang sudah dikenali dari teks untuk mencegah double counting
-            # Ini akan menjadi kompleks jika ada banyak item di satu kalimat
-            # Example: "saya mau dua burger dan satu cola"
-            # Jika "burger" dikenali, bagian "dua burger" bisa dihapus agar "cola" bisa dikenali dengan baik
-            # Tapi untuk kasus sederhana, mungkin tidak perlu terlalu kompleks.
-
-    return found_items
+            items[item_name] = quantity
+    
+    return items
 
 # === OOP Menu Item ===
 class MenuItem:
-    """Representasi satu item menu."""
     def __init__(self, name, price):
         self.name = name
         self.price = price
 
 # === OOP Order Logic ===
 class Order:
-    """Mengelola pesanan, termasuk menambah, menghapus, dan menghitung total."""
     def __init__(self):
         self.items = []
         self.payment_method = None
 
     def add_item(self, menu_item, quantity):
-        """Menambahkan item ke pesanan atau memperbarui jumlahnya jika sudah ada."""
         if quantity > 0:
+            # Check if item already exists, if yes, update quantity
             for item in self.items:
                 if item["Menu"] == menu_item.name:
                     item["Jumlah"] += quantity
                     item["Subtotal"] = item["Harga"] * item["Jumlah"]
                     return
+            # If not exists, add new item
             self.items.append({
                 "Menu": menu_item.name,
                 "Harga": menu_item.price,
                 "Jumlah": quantity,
                 "Subtotal": menu_item.price * quantity
             })
-
+    
     def remove_item(self, index):
-        """Hapus item berdasarkan index."""
+        """Hapus item berdasarkan index"""
         if 0 <= index < len(self.items):
             self.items.pop(index)
-
+    
     def update_item_quantity(self, index, new_quantity):
-        """Update jumlah item berdasarkan index."""
+        """Update jumlah item berdasarkan index"""
         if 0 <= index < len(self.items):
             if new_quantity <= 0:
                 self.remove_item(index)
             else:
                 self.items[index]["Jumlah"] = new_quantity
                 self.items[index]["Subtotal"] = self.items[index]["Harga"] * new_quantity
-
+    
     def clear_empty_items(self):
-        """Hapus item dengan jumlah 0 (jika ada, meskipun update_item_quantity sudah menanganinya)."""
+        """Hapus item dengan jumlah 0"""
         self.items = [item for item in self.items if item["Jumlah"] > 0]
 
     def get_order_df(self):
-        """Mengembalikan pesanan sebagai DataFrame Pandas."""
         return pd.DataFrame(self.items) if self.items else pd.DataFrame(columns=["Menu", "Harga", "Jumlah", "Subtotal"])
 
     def get_total(self):
-        """Menghitung total harga pesanan."""
         return sum(item["Subtotal"] for item in self.items)
 
     def reset(self):
-        """Mereset pesanan ke keadaan kosong."""
         self.items = []
         self.payment_method = None
 
     def set_payment_method(self, method):
-        """Mengatur metode pembayaran."""
         self.payment_method = method
 
     def generate_receipt(self, uang_diterima=None):
-        """Menghasilkan teks struk pembelian."""
         receipt = "=== STRUK PEMBELIAN ===\n"
         for item in self.items:
             receipt += f"{item['Menu']} x{item['Jumlah']} = Rp{item['Subtotal']:,.0f}\n"
@@ -294,15 +257,14 @@ menu_items = [
 # === Streamlit UI ===
 st.title("🍔 Mc Ronald Drive-Thru 🍔")
 
-# Inisialisasi session state
+# Initialize session state
 if "order" not in st.session_state:
     st.session_state.order = Order()
 if "stage" not in st.session_state:
     st.session_state.stage = "ordering"  # ordering, payment, completed
 if "last_transcription" not in st.session_state:
     st.session_state.last_transcription = ""
-if "uang_diterima_payment_stage" not in st.session_state:
-    st.session_state.uang_diterima_payment_stage = 0
+
 
 # Menampilkan menu dan harga
 st.subheader("Menu Mc Ronald")
@@ -311,7 +273,7 @@ st.dataframe(menu_df, use_container_width=True, hide_index=True)
 
 # Sidebar untuk kategori menu
 with st.sidebar:
-    st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmF6aGw2YWN6am1zZgo4M2RvOHl2bWZlbXRkbTNjcjAzbzgzOHhkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OoIZRC435JrcFV6z/giphy.gif", caption="Fast Food Logo", width=300)
+    st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmF6aGw2YWN6am1zZGo4M2RvOHl2bWZlbXRkbTNjcjAzbzgzOHhkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OoIZRC435JrcFV6z/giphy.gif", caption="Fast Food Logo", width=300)
     st.title("Menu Ingredient")
     category = st.radio("Pilih kategori:", ["Burger", "Ayam Goreng", "Kentang Goreng", "Hotdog", "Cola", "Mineral Water", "Es Krim"])
 
@@ -362,25 +324,23 @@ st.markdown(
 )
 
 # Tambahkan header dengan gaya khusus
-st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic Sans MS, Comic Sans, cursive; color:#8B4513; font-weight:bold; letter-spacing:2px; margin-bottom:0.5em; text-shadow:2px 2px 8px #ffd70099,0 2px 8px #fda08566;">🍔PAYMENT🍔</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic Sans MS, Comic Sans, cursive; color:#8B4513; font-weight:bold; letter-spacing:2px; margin-bottom:0.5em; text-shadow:2px 2px 8px #ffd70099,0 2px 8px #fda08566;">🍔PEMESANAN🍔</h1>', unsafe_allow_html=True) # Changed from PAYMENT to PEMESANAN
 
-# ---
-## Tahap Pemesanan
-#---
+# === TAHAP PEMESANAN ===
 if st.session_state.stage == "ordering":
     st.subheader("🎤 Pemesanan Suara")
-
+    
     # Tampilkan pesanan saat ini jika ada
     if st.session_state.order.items:
         st.subheader("Pesanan Saat Ini:")
-
+        
         # Tampilkan setiap item dengan tombol hapus dan edit
         for idx, item in enumerate(st.session_state.order.items):
             col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
 
             with col1:
                 st.write(f"**{item['Menu']}** - Rp{item['Harga']:,.0f} x {item['Jumlah']} = Rp{item['Subtotal']:,.0f}")
-
+            
             with col2:
                 # Tombol kurangi jumlah
                 if st.button("➖", key=f"decrease_{idx}", help="Kurangi 1"):
@@ -388,18 +348,19 @@ if st.session_state.stage == "ordering":
                         item['Jumlah'] -= 1
                         item['Subtotal'] = item['Harga'] * item['Jumlah']
                     else:
-                        st.session_state.order.items.pop(idx) # Hapus jika jumlah jadi 0
+                        # Jika jumlah = 1, hapus item
+                        st.session_state.order.items.pop(idx)
                     st.rerun()
-
+            
             with col3:
-                # Input jumlah langsung
+                # Input jumlah langsung tanpa label 'Qty'
                 new_qty = st.number_input(
-                    label="",
-                    min_value=0,
-                    value=item['Jumlah'],
+                    label="",  # Menghapus label
+                    min_value=0, 
+                    value=item['Jumlah'], 
                     key=f"qty_{idx}",
-                    label_visibility="collapsed"
-                )
+                    label_visibility="collapsed"  # Menyembunyikan label agar lebih sejajar
+                )  # Menghapus properti help
                 if new_qty != item['Jumlah']:
                     if new_qty == 0:
                         st.session_state.order.items.pop(idx)
@@ -407,75 +368,63 @@ if st.session_state.stage == "ordering":
                         item['Jumlah'] = new_qty
                         item['Subtotal'] = item['Harga'] * item['Jumlah']
                     st.rerun()
-
+            
             with col4:
                 # Tombol tambah jumlah
                 if st.button("➕", key=f"increase_{idx}", help="Tambah 1"):
                     item['Jumlah'] += 1
                     item['Subtotal'] = item['Harga'] * item['Jumlah']
                     st.rerun()
-
+            
             with col5:
                 # Tombol hapus item
                 if st.button("🗑️", key=f"delete_{idx}", help="Hapus item"):
                     st.session_state.order.items.pop(idx)
                     st.rerun()
-
+        
         st.divider()
         st.write(f"### **Total: Rp{st.session_state.order.get_total():,.0f}**")
+    
+    # === st_audiorec for voice input ===
+    st.markdown("Tekan tombol 'Record' di bawah untuk mulai berbicara:")
+    wav_audio_data = st_audiorec(key="voice_recorder") # Use st_audiorec component
 
-    # Input audio menggunakan st.audio_recorder
-    st.info("Tekan tombol 'Rekam Audio' untuk memulai perekaman pesanan Anda.")
-    audio_bytes = audio_recorder(
-        text="Rekam Audio",
-        sampling_rate=16000, # Penting: Whisper butuh 16kHz
-        # Pengaturan lain bisa ditambahkan, misal: icon="mic"
-    )
+    if wav_audio_data is not None:
+        # st.audio(wav_audio_data, format='audio/wav') # Optional: uncomment to play back recorded audio
 
-    if audio_bytes:
-        with st.spinner("🎤 Memproses pesanan dari audio..."):
-            try:
-                # Simpan audio_bytes ke file sementara
-                temp_audio_file = "temp_audio.wav"
-                with open(temp_audio_file, "wb") as f:
-                    f.write(audio_bytes)
+        # Save the recorded audio to a temporary file
+        temp_audio_file = "temp_audio_recorded.wav"
+        with open(temp_audio_file, "wb") as f:
+            f.write(wav_audio_data)
 
-                # Mengenali suara dengan model Whisper
-                transcription = recognize_speech_from_whisper(temp_audio_file)
-                st.session_state.last_transcription = transcription
+        with st.spinner("🎤 Mendengarkan pesanan..."):
+            transcription = recognize_speech_from_whisper(temp_audio_file)
+            st.session_state.last_transcription = transcription
 
-                # Hapus file sementara setelah diproses
-                if os.path.exists(temp_audio_file):
-                    os.remove(temp_audio_file)
+            # Clean up temp file
+            if os.path.exists(temp_audio_file):
+                os.remove(temp_audio_file)
 
-                st.success(f"Pesanan yang dikenali: {transcription}")
+            # Menampilkan hasil transkripsi
+            st.success(f"Pesanan yang dikenali: {transcription}")
 
-                # Proses transkripsi untuk menambah item ke pesanan
-                items_recognized = process_order_text(transcription)
-                if items_recognized:
-                    for item_key, qty in items_recognized.items():
-                        # Cari item menu yang cocok berdasarkan keywords
-                        found_match = False
-                        for menu_item in menu_items:
-                            # Gunakan item_key yang sudah dinormalisasi dari process_order_text
-                            # Jika item_key adalah nama menu yang tepat
-                            if item_key.lower() == menu_item.name.replace("🍔 ", "").replace("🍗 ", "").replace("🍟 ", "").replace("🌭 ", "").replace("🥤 ", "").replace("🍦 ", "").lower():
-                                st.session_state.order.add_item(menu_item, qty)
-                                st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
-                                found_match = True
-                                break
-                        if not found_match:
-                            st.warning(f"Item '{item_key}' tidak dikenali dalam menu.")
-                else:
-                    st.warning("Tidak ada item yang dikenali dari rekaman suara. Silakan coba lagi dengan lebih jelas.")
+            # Proses transkripsi untuk menambah item ke pesanan
+            items_recognized = process_order_text(transcription)
+            if items_recognized:
+                for item_key, qty in items_recognized.items():
+                    # Find matching menu item
+                    for menu_item in menu_items:
+                        if item_key.replace(" ", "").lower() in menu_item.name.replace(" ", "").lower():
+                            st.session_state.order.add_item(menu_item, qty)
+                            st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
+                            break
+            else:
+                st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
+        st.rerun() # Rerun to update the order display
 
-            except Exception as e:
-                st.error(f"Error saat memproses rekaman suara: {str(e)}")
-
-
-    # Tombol aksi di bawah
+    # Tombol untuk lanjut ke pembayaran atau reset
     col1, col2 = st.columns(2)
-
+    
     with col1:
         if st.button("🛒 Lanjut ke Pembayaran", key="payment_button"):
             if st.session_state.order.items:
@@ -483,7 +432,7 @@ if st.session_state.stage == "ordering":
                 st.rerun()
             else:
                 st.warning("Pesanan masih kosong! Silakan pesan terlebih dahulu.")
-
+    
     with col2:
         if st.button("🗑️ Reset Pesanan", key="reset_button"):
             st.session_state.order.reset()
@@ -491,35 +440,31 @@ if st.session_state.stage == "ordering":
             st.success("Pesanan direset!")
             st.rerun()
 
-# ---
-## Tahap Pembayaran
-#---
+# === TAHAP PEMBAYARAN ===
 elif st.session_state.stage == "payment":
     st.subheader("💳 Pembayaran")
-
+    
     # Tampilkan ringkasan pesanan
     st.subheader("Ringkasan Pesanan:")
     order_df = st.session_state.order.get_order_df()
     st.dataframe(order_df, use_container_width=True, hide_index=True)
-
+    
     total = st.session_state.order.get_total()
     st.write(f"### **Total: Rp{total:,.0f}**")
-
+    
     # Input metode pembayaran
     payment_method = st.selectbox("Pilih Metode Pembayaran:", ["Cash", "E-Wallet", "Debit Card"], key="payment_method")
     st.session_state.order.set_payment_method(payment_method)
-
+    
     # Input jumlah uang yang diterima (hanya untuk Cash)
     if payment_method == "Cash":
         uang_diterima = st.number_input(
-            "💵 Masukkan uang diterima (Rp):",
-            min_value=0,
-            step=1000,
-            value=st.session_state.uang_diterima_payment_stage, # Pertahankan nilai dari session state
-            key="uang_diterima_input"
+            "💵 Masukkan uang diterima (Rp):", 
+            min_value=0, 
+            step=1000, 
+            key="uang_diterima"
         )
-        st.session_state.uang_diterima_payment_stage = uang_diterima # Simpan ke session state
-
+        
         if uang_diterima > 0:
             if uang_diterima >= total:
                 kembalian = uang_diterima - total
@@ -535,42 +480,44 @@ elif st.session_state.stage == "payment":
         # Untuk E-Wallet dan Debit Card, tidak perlu input uang
         st.info(f"Silakan lakukan pembayaran melalui {payment_method}")
         uang_diterima = total  # Set equal to total for non-cash payments
-        st.session_state.uang_diterima_payment_stage = total # Simpan ke session state
         payment_complete = True
-
+    
     # Tombol aksi
     col1, col2 = st.columns(2)
-
+    
     with col1:
         if st.button("⬅️ Kembali ke Pemesanan", key="back_to_order"):
             st.session_state.stage = "ordering"
             st.rerun()
-
+    
     with col2:
+        # Simpan uang_diterima ke session_state sebelum pindah stage
+        st.session_state["uang_diterima"] = uang_diterima 
         if payment_complete and st.button("🖨️ Cetak Struk", key="print_receipt"):
             st.session_state.stage = "completed"
             st.rerun()
 
-# ---
-## Tahap Selesai
-#---
+# === TAHAP SELESAI ===
 elif st.session_state.stage == "completed":
     st.subheader("🎉 Pembayaran Berhasil!")
-
+    
     # Generate dan tampilkan struk
-    # Gunakan uang_diterima yang disimpan di session state
-    receipt = st.session_state.order.generate_receipt(st.session_state.uang_diterima_payment_stage)
+    # Pastikan uang_diterima diambil dari session_state dengan default yang benar
+    uang_diterima_for_receipt = st.session_state.get("uang_diterima", st.session_state.order.get_total())
+    
+    receipt = st.session_state.order.generate_receipt(uang_diterima_for_receipt)
     st.code(receipt, language="text")
-
+    
     # Tombol untuk pesanan baru
     if st.button("🔄 Pesanan Baru", key="new_order"):
         st.session_state.order.reset()
         st.session_state.stage = "ordering"
         st.session_state.last_transcription = ""
-        # Reset uang_diterima_payment_stage
-        st.session_state.uang_diterima_payment_stage = 0
+        # Clear the uang_diterima from session state
+        if "uang_diterima" in st.session_state:
+            del st.session_state["uang_diterima"]
         st.rerun()
 
-# Tampilkan transkripsi terakhir jika ada di tahap ordering
+# Tampilkan transkripsi terakhir jika ada
 if st.session_state.last_transcription and st.session_state.stage == "ordering":
     st.info(f"Transkripsi terakhir: {st.session_state.last_transcription}")
