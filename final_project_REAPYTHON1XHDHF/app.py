@@ -49,7 +49,7 @@ def recognize_speech_from_whisper(audio_file_path):
             return "Error: Tidak dapat memproses file audio"
         
         # Proses audio
-        inputs = processor(audio_input, sampling_rate=16000, return_tensors="pt")
+        inputs = processor(audio_input, return_tensors="pt")
         
         # Generate dengan parameter yang lebih stabil
         with torch.no_grad():
