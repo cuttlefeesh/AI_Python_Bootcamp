@@ -7,6 +7,7 @@ import librosa
 # import speech_recognition as sr
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import os
+from audio_recorder_streamlit import audio_recorder
 
 # Menonaktifkan tokenizers parallelism untuk mencegah warning pada beberapa deployment environment
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -425,7 +426,7 @@ if st.session_state.stage == "ordering":
 
     # Input audio menggunakan st.audio_recorder
     st.info("Tekan tombol 'Rekam Audio' untuk memulai perekaman pesanan Anda.")
-    audio_bytes = st.audio_recorder(
+    audio_bytes = audio_recorder(
         text="Rekam Audio",
         sampling_rate=16000, # Penting: Whisper butuh 16kHz
         # Pengaturan lain bisa ditambahkan, misal: icon="mic"
