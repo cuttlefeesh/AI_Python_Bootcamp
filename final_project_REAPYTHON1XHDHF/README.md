@@ -37,6 +37,7 @@ librosa
 speechrecognition
 transformers
 streamlit-audiorec
+accelerate
 ```
 
 ### Hardware
