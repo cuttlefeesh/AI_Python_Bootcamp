@@ -6,6 +6,8 @@ import librosa
 import speech_recognition as sr # Although not directly used for recording, it's part of the original logic
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import os
+import hashlib
+import time
 from st_audiorec import st_audiorec # Import st_audiorec
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -264,7 +266,10 @@ if "stage" not in st.session_state:
     st.session_state.stage = "ordering"  # ordering, payment, completed
 if "last_transcription" not in st.session_state:
     st.session_state.last_transcription = ""
-
+if "processed_audio_hashes" not in st.session_state:
+    st.session_state.processed_audio_hashes = set()
+if "last_audio_processed_time" not in st.session_state:
+    st.session_state.last_audio_processed_time = 0
 
 # Menampilkan menu dan harga
 st.subheader("Menu Mc Ronald")
@@ -324,7 +329,7 @@ st.markdown(
 )
 
 # Tambahkan header dengan gaya khusus
-st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic Sans MS, Comic Sans, cursive; color:#8B4513; font-weight:bold; letter-spacing:2px; margin-bottom:0.5em; text-shadow:2px 2px 8px #ffd70099,0 2px 8px #fda08566;">🍔PEMESANAN🍔</h1>', unsafe_allow_html=True) # Changed from PAYMENT to PEMESANAN
+st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic Sans MS, Comic Sans, cursive; color:#8B4513; font-weight:bold; letter-spacing:2px; margin-bottom:0.5em; text-shadow:2px 2px 8px #ffd70099,0 2px 8px #fda08566;">🍔PEMESANAN🍔</h1>', unsafe_allow_html=True)
 
 # === TAHAP PEMESANAN ===
 if st.session_state.stage == "ordering":
@@ -353,14 +358,14 @@ if st.session_state.stage == "ordering":
                     st.rerun()
             
             with col3:
-                # Input jumlah langsung tanpa label 'Qty'
+                # Input jumlah langsung tanpa label
                 new_qty = st.number_input(
-                    label="",  # Menghapus label
+                    label="",
                     min_value=0, 
                     value=item['Jumlah'], 
                     key=f"qty_{idx}",
-                    label_visibility="collapsed"  # Menyembunyikan label agar lebih sejajar
-                )  # Menghapus properti help
+                    label_visibility="collapsed"
+                )
                 if new_qty != item['Jumlah']:
                     if new_qty == 0:
                         st.session_state.order.items.pop(idx)
@@ -387,41 +392,72 @@ if st.session_state.stage == "ordering":
     
     # === st_audiorec for voice input ===
     st.markdown("Tekan tombol 'Record' di bawah untuk mulai berbicara:")
-    wav_audio_data = st_audiorec() # Use st_audiorec component
+    wav_audio_data = st_audiorec()
 
     if wav_audio_data is not None:
-        # st.audio(wav_audio_data, format='audio/wav') # Optional: uncomment to play back recorded audio
+        # Buat hash dari data audio untuk mendeteksi duplikasi
+        audio_hash = hashlib.md5(wav_audio_data).hexdigest()
+        current_time = time.time()
+        
+        # Cek apakah audio ini sudah pernah diproses DAN masih fresh (dalam 30 detik terakhir)
+        time_since_last_process = current_time - st.session_state.last_audio_processed_time
+        is_duplicate = audio_hash in st.session_state.processed_audio_hashes and time_since_last_process < 30
+        
+        if not is_duplicate:
+            # Save the recorded audio to a temporary file
+            temp_audio_file = "temp_audio_recorded.wav"
+            
+            try:
+                with open(temp_audio_file, "wb") as f:
+                    f.write(wav_audio_data)
 
-        # Save the recorded audio to a temporary file
-        temp_audio_file = "temp_audio_recorded.wav"
-        with open(temp_audio_file, "wb") as f:
-            f.write(wav_audio_data)
+                with st.spinner("🎤 Mendengarkan pesanan..."):
+                    transcription = recognize_speech_from_whisper(temp_audio_file)
+                    st.session_state.last_transcription = transcription
 
-        with st.spinner("🎤 Mendengarkan pesanan..."):
-            transcription = recognize_speech_from_whisper(temp_audio_file)
-            st.session_state.last_transcription = transcription
+                    # Menampilkan hasil transkripsi
+                    st.success(f"Pesanan yang dikenali: {transcription}")
 
-            # Clean up temp file
-            if os.path.exists(temp_audio_file):
-                os.remove(temp_audio_file)
-
-            # Menampilkan hasil transkripsi
-            st.success(f"Pesanan yang dikenali: {transcription}")
-
-            # Proses transkripsi untuk menambah item ke pesanan
-            items_recognized = process_order_text(transcription)
-            if items_recognized:
-                for item_key, qty in items_recognized.items():
-                    # Find matching menu item
-                    for menu_item in menu_items:
-                        if item_key.replace(" ", "").lower() in menu_item.name.replace(" ", "").lower():
-                            st.session_state.order.add_item(menu_item, qty)
-                            st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
-                            break
-
+                    # Proses transkripsi untuk menambah item ke pesanan
+                    items_recognized = process_order_text(transcription)
+                    if items_recognized:
+                        for item_key, qty in items_recognized.items():
+                            # Find matching menu item
+                            for menu_item in menu_items:
+                                if item_key.replace(" ", "").lower() in menu_item.name.replace(" ", "").lower():
+                                    st.session_state.order.add_item(menu_item, qty)
+                                    st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
+                                    break
+                    else:
+                        st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
+                    
+                    # Tandai audio ini sebagai sudah diproses
+                    st.session_state.processed_audio_hashes.add(audio_hash)
+                    st.session_state.last_audio_processed_time = current_time
+                    
+                    # Bersihkan hash lama (lebih dari 10 item) untuk menghemat memori
+                    if len(st.session_state.processed_audio_hashes) > 10:
+                        # Reset jika terlalu banyak, atau implementasi LRU cache
+                        st.session_state.processed_audio_hashes.clear()
+            
+            except Exception as e:
+                st.error(f"Error saat memproses audio: {str(e)}")
+            
+            finally:
+                # Clean up temp file
+                if os.path.exists(temp_audio_file):
+                    try:
+                        os.remove(temp_audio_file)
+                    except Exception as e:
+                        st.warning(f"Gagal menghapus file temporary: {str(e)}")
+            
+            st.rerun() # Rerun to update the order display
+        else:
+            # Audio sudah pernah diproses atau terlalu cepat
+            if time_since_last_process < 2:
+                st.info("⏳ Tunggu sebentar sebelum merekam audio baru...")
             else:
-                st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
-        st.rerun() # Rerun to update the order display
+                st.info("🔄 Audio ini sudah diproses. Silakan rekam pesanan baru.")
 
     # Tombol untuk lanjut ke pembayaran atau reset
     col1, col2 = st.columns(2)
@@ -438,6 +474,8 @@ if st.session_state.stage == "ordering":
         if st.button("🗑️ Reset Pesanan", key="reset_button"):
             st.session_state.order.reset()
             st.session_state.last_transcription = ""
+            st.session_state.processed_audio_hashes.clear()
+            st.session_state.last_audio_processed_time = 0
             st.success("Pesanan direset!")
             st.rerun()
 
@@ -513,6 +551,8 @@ elif st.session_state.stage == "completed":
         st.session_state.order.reset()
         st.session_state.stage = "ordering"
         st.session_state.last_transcription = ""
+        st.session_state.processed_audio_hashes.clear()
+        st.session_state.last_audio_processed_time = 0
         # Clear the uang_diterima from session state
         if "uang_diterima" in st.session_state:
             del st.session_state["uang_diterima"]
