@@ -4,4 +4,4 @@ torch
 librosa
 speechrecognition
 transformers
-st_audiorec
+st_audiorec==0.1.3
