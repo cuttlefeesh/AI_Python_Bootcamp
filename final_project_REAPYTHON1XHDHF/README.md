@@ -46,7 +46,7 @@ streamlit-audiorec
 
 ## 📦 Instalasi
 
-1. **Clone atau download file `app.py`**
+1. **Clone atau download file repository**
 
 2. **Install dependencies:**
 ```bash
