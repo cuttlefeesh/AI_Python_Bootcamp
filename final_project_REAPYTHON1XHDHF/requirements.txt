@@ -3,3 +3,4 @@ pandas
 torch==2.7.1 
 librosa 
 transformers==4.35.0
+accelerate
