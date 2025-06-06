@@ -1,6 +1,6 @@
 streamlit==1.32.0 # Coba versi ini 
 pandas 
-torch==2.7.1 
+torch
 librosa 
-transformers==4.35.0
+transformers
 accelerate
