@@ -492,7 +492,7 @@ if st.session_state.stage == "ordering":
 
 # ---
 ## Tahap Pembayaran
----
+#---
 elif st.session_state.stage == "payment":
     st.subheader("💳 Pembayaran")
 
@@ -552,7 +552,7 @@ elif st.session_state.stage == "payment":
 
 # ---
 ## Tahap Selesai
----
+#---
 elif st.session_state.stage == "completed":
     st.subheader("🎉 Pembayaran Berhasil!")
 
