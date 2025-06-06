@@ -418,9 +418,6 @@ if st.session_state.stage == "ordering":
                             st.session_state.order.add_item(menu_item, qty)
                             st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
                             break
-                            
-                        #del temp_wav_audio_data 
-                        del temp_audio_file
 
             else:
                 st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
