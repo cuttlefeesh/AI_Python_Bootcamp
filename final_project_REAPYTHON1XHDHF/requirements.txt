@@ -1,7 +1,7 @@
-streamlit==1.32.0 # Coba versi ini 
-pandas 
+streamlit
+pandas
 torch
-librosa 
+librosa
+speechrecognition
 transformers
-accelerate
-audio-recorder-streamlit
+st_audiorec
