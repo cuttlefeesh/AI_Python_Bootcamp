@@ -410,7 +410,7 @@ if st.session_state.stage == "ordering":
                         if item_key.replace(" ", "").lower() in menu_item.name.replace(" ", "").lower():
                             st.session_state.order.add_item(menu_item, qty)
                             st.success(f"✅ Menambahkan {qty} x {menu_item.name}"
-                            break
+                        break
                                        
             if "temp_wav_audio_data" in st.session_state:
                 del st.session_state.temp_wav_audio_data
