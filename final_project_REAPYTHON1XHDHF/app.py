@@ -365,7 +365,7 @@ st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic San
 
 # ---
 ## Tahap Pemesanan
----
+#---
 if st.session_state.stage == "ordering":
     st.subheader("🎤 Pemesanan Suara")
 
