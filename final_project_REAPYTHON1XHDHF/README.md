@@ -69,6 +69,11 @@ streamlit run app.py
 ```
 
 
+## 🚀 Cara Menjalankan di Streamlit Cloud
+1. **Kunjungi link berikut "https://mcronald.streamlit.app/"**
+
+
+
 ## 📱 Cara Penggunaan
 
 ### 1. Tahap Pemesanan
