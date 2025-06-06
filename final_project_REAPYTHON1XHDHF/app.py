@@ -419,7 +419,7 @@ if st.session_state.stage == "ordering":
                             st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
                             break
                             
-                        del temp_wav_audio_data 
+                        #del temp_wav_audio_data 
                         del temp_audio_file
 
             else:
