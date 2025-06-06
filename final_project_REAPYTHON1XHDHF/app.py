@@ -3,10 +3,10 @@ import pandas as pd
 import datetime
 import torch
 import librosa
-import speech_recognition as sr
+import speech_recognition as sr # Although not directly used for recording, it's part of the original logic
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import os
-from st_audiorec import st_audiorec
+from st_audiorec import st_audiorec # Import st_audiorec
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -49,7 +49,7 @@ def recognize_speech_from_whisper(audio_file_path):
             return "Error: Tidak dapat memproses file audio"
         
         # Proses audio
-        inputs = processor(audio_input, sampling_rate=16000, return_tensors="pt")
+        inputs = processor(audio_input, return_tensors="pt")
         
         # Generate dengan parameter yang lebih stabil
         with torch.no_grad():
@@ -264,9 +264,6 @@ if "stage" not in st.session_state:
     st.session_state.stage = "ordering"  # ordering, payment, completed
 if "last_transcription" not in st.session_state:
     st.session_state.last_transcription = ""
-# Flag baru untuk melacak apakah audio telah diproses
-if "audio_processed_once" not in st.session_state:
-    st.session_state.audio_processed_once = False
 
 
 # Menampilkan menu dan harga
@@ -276,7 +273,7 @@ st.dataframe(menu_df, use_container_width=True, hide_index=True)
 
 # Sidebar untuk kategori menu
 with st.sidebar:
-    st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmZazhsdl2FjenJtc2RvanQyM2RvOHl2bWZlbXRkbTNjcjAzbzgzOHhkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OoIZRC435JrcFV6z/giphy.gif", caption="Fast Food Logo", width=300)
+    st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmF6aGw2YWN6am1zZGo4M2RvOHl2bWZlbXRkbTNjcjAzbzgzOHhkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OoIZRC435JrcFV6z/giphy.gif", caption="Fast Food Logo", width=300)
     st.title("Menu Ingredient")
     category = st.radio("Pilih kategori:", ["Burger", "Ayam Goreng", "Kentang Goreng", "Hotdog", "Cola", "Mineral Water", "Es Krim"])
 
@@ -327,7 +324,7 @@ st.markdown(
 )
 
 # Tambahkan header dengan gaya khusus
-st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic Sans MS, Comic Sans, cursive; color:#8B4513; font-weight:bold; letter-spacing:2px; margin-bottom:0.5em; text-shadow:2px 2px 8px #ffd70099,0 2px 8px #fda08566;">🍔PEMESANAN🍔</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align:center; font-size:2rem; font-family:Comic Sans MS, Comic Sans, cursive; color:#8B4513; font-weight:bold; letter-spacing:2px; margin-bottom:0.5em; text-shadow:2px 2px 8px #ffd70099,0 2px 8px #fda08566;">🍔PEMESANAN🍔</h1>', unsafe_allow_html=True) # Changed from PAYMENT to PEMESANAN
 
 # === TAHAP PEMESANAN ===
 if st.session_state.stage == "ordering":
@@ -363,7 +360,7 @@ if st.session_state.stage == "ordering":
                     value=item['Jumlah'], 
                     key=f"qty_{idx}",
                     label_visibility="collapsed"  # Menyembunyikan label agar lebih sejajar
-                )
+                )  # Menghapus properti help
                 if new_qty != item['Jumlah']:
                     if new_qty == 0:
                         st.session_state.order.items.pop(idx)
@@ -390,21 +387,12 @@ if st.session_state.stage == "ordering":
     
     # === st_audiorec for voice input ===
     st.markdown("Tekan tombol 'Record' di bawah untuk mulai berbicara:")
-    
-    # Pastikan key bersifat unik untuk setiap render, atau gunakan key yang statis
-    # Jika menggunakan st_audiorec() tanpa key, itu biasanya default untuk setiap render.
-    # Kita bisa membuatnya lebih eksplisit dengan key yang berbeda saat direset.
-    audiorec_key = "voice_recorder_initial"
-    if st.session_state.audio_processed_once:
-        audiorec_key = "voice_recorder_processed" # Ganti key agar komponen mereset
-        
-    wav_audio_data = st_audiorec(key=audiorec_key) # Gunakan komponen st_audiorec
-    
-    # Hanya proses audio jika data tersedia DAN belum diproses di siklus ini
-    if wav_audio_data is not None and not st.session_state.audio_processed_once:
+    wav_audio_data = st_audiorec() # Use st_audiorec component
+
+    if wav_audio_data is not None:
         # st.audio(wav_audio_data, format='audio/wav') # Optional: uncomment to play back recorded audio
 
-        # Simpan audio yang direkam ke file sementara
+        # Save the recorded audio to a temporary file
         temp_audio_file = "temp_audio_recorded.wav"
         with open(temp_audio_file, "wb") as f:
             f.write(wav_audio_data)
@@ -413,7 +401,7 @@ if st.session_state.stage == "ordering":
             transcription = recognize_speech_from_whisper(temp_audio_file)
             st.session_state.last_transcription = transcription
 
-            # Bersihkan file sementara
+            # Clean up temp file
             if os.path.exists(temp_audio_file):
                 os.remove(temp_audio_file)
 
@@ -424,19 +412,15 @@ if st.session_state.stage == "ordering":
             items_recognized = process_order_text(transcription)
             if items_recognized:
                 for item_key, qty in items_recognized.items():
-                    # Temukan item menu yang cocok
+                    # Find matching menu item
                     for menu_item in menu_items:
-                        # Ubah perbandingan agar lebih robust terhadap spasi dan kapitalisasi
-                        if item_key.replace(" ", "").lower() == menu_item.name.replace(" ", "").lower():
+                        if item_key.replace(" ", "").lower() in menu_item.name.replace(" ", "").lower():
                             st.session_state.order.add_item(menu_item, qty)
                             st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
                             break
             else:
                 st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
-        
-        # Setelah selesai memproses audio, set flag agar tidak diproses lagi
-        st.session_state.audio_processed_once = True
-        st.rerun() # Rerun untuk memperbarui tampilan pesanan dan memastikan komponen audiorec terinisialisasi ulang jika perlu
+        st.rerun() # Rerun to update the order display
 
     # Tombol untuk lanjut ke pembayaran atau reset
     col1, col2 = st.columns(2)
@@ -453,7 +437,6 @@ if st.session_state.stage == "ordering":
         if st.button("🗑️ Reset Pesanan", key="reset_button"):
             st.session_state.order.reset()
             st.session_state.last_transcription = ""
-            st.session_state.audio_processed_once = False # Reset flag saat pesanan direset
             st.success("Pesanan direset!")
             st.rerun()
 
@@ -496,7 +479,7 @@ elif st.session_state.stage == "payment":
     else:
         # Untuk E-Wallet dan Debit Card, tidak perlu input uang
         st.info(f"Silakan lakukan pembayaran melalui {payment_method}")
-        uang_diterima = total 
+        uang_diterima = total  # Set equal to total for non-cash payments
         payment_complete = True
     
     # Tombol aksi
@@ -508,9 +491,10 @@ elif st.session_state.stage == "payment":
             st.rerun()
     
     with col2:
+        # Simpan uang_diterima ke session_state sebelum pindah stage
+        st.session_state["uang_diterima"] = uang_diterima 
         if payment_complete and st.button("🖨️ Cetak Struk", key="print_receipt"):
             st.session_state.stage = "completed"
-            st.session_state.uang_diterima_final = uang_diterima # Simpan nilai untuk struk
             st.rerun()
 
 # === TAHAP SELESAI ===
@@ -518,7 +502,8 @@ elif st.session_state.stage == "completed":
     st.subheader("🎉 Pembayaran Berhasil!")
     
     # Generate dan tampilkan struk
-    uang_diterima_for_receipt = st.session_state.get("uang_diterima_final", st.session_state.order.get_total())
+    # Pastikan uang_diterima diambil dari session_state dengan default yang benar
+    uang_diterima_for_receipt = st.session_state.get("uang_diterima", st.session_state.order.get_total())
     
     receipt = st.session_state.order.generate_receipt(uang_diterima_for_receipt)
     st.code(receipt, language="text")
@@ -528,11 +513,8 @@ elif st.session_state.stage == "completed":
         st.session_state.order.reset()
         st.session_state.stage = "ordering"
         st.session_state.last_transcription = ""
-        st.session_state.audio_processed_once = False # Reset flag saat pesanan baru
-        # Hapus uang_diterima_final dari session state
-        if "uang_diterima_final" in st.session_state:
-            del st.session_state["uang_diterima_final"]
-        if "uang_diterima" in st.session_state: # Hapus juga jika ada dari number_input
+        # Clear the uang_diterima from session state
+        if "uang_diterima" in st.session_state:
             del st.session_state["uang_diterima"]
         st.rerun()
 
