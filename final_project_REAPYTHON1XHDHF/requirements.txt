@@ -1,7 +1,6 @@
 streamlit
 pandas
+datetime
 torch
 librosa
-SpeechRecognition
 transformers
-PyAudio
