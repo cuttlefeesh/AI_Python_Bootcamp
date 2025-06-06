@@ -492,7 +492,6 @@ elif st.session_state.stage == "payment":
     
     with col2:
         # Simpan uang_diterima ke session_state sebelum pindah stage
-        st.session_state["uang_diterima"] = uang_diterima 
         if payment_complete and st.button("🖨️ Cetak Struk", key="print_receipt"):
             st.session_state.stage = "completed"
             st.rerun()
