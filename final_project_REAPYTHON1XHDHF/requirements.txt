@@ -4,3 +4,4 @@ torch
 librosa 
 transformers
 accelerate
+audio-recorder-streamlit
