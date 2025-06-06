@@ -6,7 +6,7 @@ import librosa
 import speech_recognition as sr
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import os
-from st_audiorec import st_audiorec
+from st_audiorec import st_audiorec # Ini akan merujuk ke streamlit_audiorec jika itu yang terinstal
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -264,7 +264,7 @@ if "stage" not in st.session_state:
     st.session_state.stage = "ordering"  # ordering, payment, completed
 if "last_transcription" not in st.session_state:
     st.session_state.last_transcription = ""
-# Flag baru untuk melacak apakah audio telah diproses
+# Flag untuk melacak apakah audio telah diproses
 if "audio_processed_once" not in st.session_state:
     st.session_state.audio_processed_once = False
 
@@ -276,7 +276,7 @@ st.dataframe(menu_df, use_container_width=True, hide_index=True)
 
 # Sidebar untuk kategori menu
 with st.sidebar:
-    st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmZazhsdl2FjenJtc2RvanQyM2RvOHl2bWZlbXRkbTNjcjAzbzgzOHhkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OoIZRC435JrcFV6z/giphy.gif", caption="Fast Food Logo", width=300)
+    st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmF6aGw2YWN6am1zZGo4M2RvOHl2bWZlbXRkbTNjcjAzbzgzOHhkYSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12OoIZRC435JrcFV6z/giphy.gif", caption="Fast Food Logo", width=300)
     st.title("Menu Ingredient")
     category = st.radio("Pilih kategori:", ["Burger", "Ayam Goreng", "Kentang Goreng", "Hotdog", "Cola", "Mineral Water", "Es Krim"])
 
@@ -369,7 +369,7 @@ if st.session_state.stage == "ordering":
                         st.session_state.order.items.pop(idx)
                     else:
                         item['Jumlah'] = new_qty
-                        item['Subtotal'] = item['Harga'] * item['Jumlah']
+                        item['Subtotal'] = item['Harga'] * new_qty
                     st.rerun()
             
             with col4:
@@ -391,14 +391,8 @@ if st.session_state.stage == "ordering":
     # === st_audiorec for voice input ===
     st.markdown("Tekan tombol 'Record' di bawah untuk mulai berbicara:")
     
-    # Pastikan key bersifat unik untuk setiap render, atau gunakan key yang statis
-    # Jika menggunakan st_audiorec() tanpa key, itu biasanya default untuk setiap render.
-    # Kita bisa membuatnya lebih eksplisit dengan key yang berbeda saat direset.
-    audiorec_key = "voice_recorder_initial"
-    if st.session_state.audio_processed_once:
-        audiorec_key = "voice_recorder_processed" # Ganti key agar komponen mereset
-        
-    wav_audio_data = st_audiorec(key=audiorec_key) # Gunakan komponen st_audiorec
+    # Panggil st_audiorec() tanpa argumen 'key' karena versi ini tidak mendukungnya
+    wav_audio_data = st_audiorec() 
     
     # Hanya proses audio jika data tersedia DAN belum diproses di siklus ini
     if wav_audio_data is not None and not st.session_state.audio_processed_once:
@@ -406,37 +400,40 @@ if st.session_state.stage == "ordering":
 
         # Simpan audio yang direkam ke file sementara
         temp_audio_file = "temp_audio_recorded.wav"
-        with open(temp_audio_file, "wb") as f:
-            f.write(wav_audio_data)
+        with st.spinner("🎤 Mendengarkan pesanan..."): # Spinner di sini akan muncul selama pemrosesan
+            try:
+                with open(temp_audio_file, "wb") as f:
+                    f.write(wav_audio_data)
 
-        with st.spinner("🎤 Mendengarkan pesanan..."):
-            transcription = recognize_speech_from_whisper(temp_audio_file)
-            st.session_state.last_transcription = transcription
+                transcription = recognize_speech_from_whisper(temp_audio_file)
+                st.session_state.last_transcription = transcription
 
-            # Bersihkan file sementara
-            if os.path.exists(temp_audio_file):
-                os.remove(temp_audio_file)
+                # Menampilkan hasil transkripsi
+                st.success(f"Pesanan yang dikenali: {transcription}")
 
-            # Menampilkan hasil transkripsi
-            st.success(f"Pesanan yang dikenali: {transcription}")
+                # Proses transkripsi untuk menambah item ke pesanan
+                items_recognized = process_order_text(transcription)
+                if items_recognized:
+                    for item_key, qty in items_recognized.items():
+                        # Temukan item menu yang cocok
+                        for menu_item in menu_items:
+                            if item_key.replace(" ", "").lower() == menu_item.name.replace(" ", "").lower():
+                                st.session_state.order.add_item(menu_item, qty)
+                                st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
+                                break
+                else:
+                    st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
+                
+                # Setelah selesai memproses audio, set flag agar tidak diproses lagi
+                st.session_state.audio_processed_once = True
+                st.rerun() # Rerun untuk memperbarui tampilan pesanan dan memastikan komponen audiorec terinisialisasi ulang jika perlu
 
-            # Proses transkripsi untuk menambah item ke pesanan
-            items_recognized = process_order_text(transcription)
-            if items_recognized:
-                for item_key, qty in items_recognized.items():
-                    # Temukan item menu yang cocok
-                    for menu_item in menu_items:
-                        # Ubah perbandingan agar lebih robust terhadap spasi dan kapitalisasi
-                        if item_key.replace(" ", "").lower() == menu_item.name.replace(" ", "").lower():
-                            st.session_state.order.add_item(menu_item, qty)
-                            st.success(f"✅ Menambahkan {qty} x {menu_item.name}")
-                            break
-            else:
-                st.warning("Tidak ada item yang dikenali. Silakan coba lagi dengan lebih jelas.")
-        
-        # Setelah selesai memproses audio, set flag agar tidak diproses lagi
-        st.session_state.audio_processed_once = True
-        st.rerun() # Rerun untuk memperbarui tampilan pesanan dan memastikan komponen audiorec terinisialisasi ulang jika perlu
+            except Exception as e:
+                st.error(f"Terjadi kesalahan saat memproses audio: {e}")
+            finally:
+                # Bersihkan file sementara
+                if os.path.exists(temp_audio_file):
+                    os.remove(temp_audio_file)
 
     # Tombol untuk lanjut ke pembayaran atau reset
     col1, col2 = st.columns(2)
