@@ -34,8 +34,9 @@ streamlit
 pandas
 torch
 librosa
-speech_recognition
+speechrecognition
 transformers
+streamlit-audiorec
 ```
 
 ### Hardware
@@ -45,7 +46,7 @@ transformers
 
 ## 📦 Instalasi
 
-1. **Clone atau download file `voice.py`**
+1. **Clone atau download file `app.py`**
 
 2. **Install dependencies:**
 ```bash
@@ -53,7 +54,7 @@ pip install -r requirements.txt
 ```
 
 
-## 🚀 Cara Menjalankan
+## 🚀 Cara Menjalankan di Localhost
 
 1. **Buka VS Code**
 
@@ -64,7 +65,7 @@ cd "path/to/your/app"
 
 3. **Jalankan aplikasi:**
 ```bash
-streamlit run voice.py
+streamlit run app.py
 ```
 
 
